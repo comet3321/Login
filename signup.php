@@ -1,7 +1,5 @@
 <?php
 require_once('config.php');
-require_once('function.php');
-
 //データベース接続・テーブルが無い場合は作成
 try {
   $pdo = new PDO(DSN, DB_USER, DB_PASS);
@@ -15,15 +13,12 @@ try {
 } catch (Exception $e) {
   echo $e->getMessage() . PHP_EOL;
 }
-
 //POSTのValidate。
-if (filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) && !empty($_POST['password'])) {
-  $email = $_POST['email'];
-}else{
+if (!$email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
   echo '入力された値が不正です。';
   return false;
 }
-
+//パスワードの正規表現
 if (preg_match('/\A(?=.*?[a-z])(?=.*?\d)[a-z\d]{8,100}+\z/i', $_POST['password'])) {
   $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
 }else{
@@ -31,7 +26,9 @@ if (preg_match('/\A(?=.*?[a-z])(?=.*?\d)[a-z\d]{8,100}+\z/i', $_POST['password']
   return false;
 }
 //DB内のメールアドレスを取得
-$row = getEmails($email);
+$stmt = $pdo->prepare("select email from userDeta where email = ?");
+$stmt->execute([$email]);
+$row = $stmt->fetch(PDO::FETCH_ASSOC);
 //DB内のメールアドレスと重複していない場合、登録する。
 if (!isset($row['email'])) {
   $stmt = $pdo->prepare("insert into userDeta(email, password) value(?, ?)");
